@@ -13,9 +13,10 @@ import (
 )
 
 type SessionTracker struct {
-	ClientMSGS   []string
-	ClientID     string
-	ClientNumber string
+	ClientMSGS     []string `json:"client_msgs"`
+	ClientsPrevMSG string   `json:"client_prev_msg"`
+	ClientID       string   `json:"client_id"`
+	ClientNumber   string   `json:"client_number"`
 }
 
 type Server struct {

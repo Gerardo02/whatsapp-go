@@ -1,9 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"io"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/twilio/twilio-go/twiml"
 )
@@ -16,26 +18,21 @@ func (server *Server) handlerConvo(w http.ResponseWriter, r *http.Request) {
 		log.Fatal(err)
 	}
 
-	incomingMsg := r.PostForm.Get("Body")
+	incomingMsg := strings.ToLower(r.PostForm.Get("Body"))
 	client := r.PostForm.Get("From")
 	clientID := generateHash(client)
 
 	server.mut.Lock()
 	session, exists := server.sessions[clientID]
-	if !exists {
-		session = &SessionTracker{
-			ClientID:     clientID,
-			ClientNumber: client,
-		}
-
-		server.sessions[clientID] = session
-	}
 	server.mut.Unlock()
 
-	if incomingMsg == "Hi" || incomingMsg == "hi" {
+	session = server.handleIncommingSession(session, exists, client, clientID)
+	session.ClientsPrevMSG = incomingMsg
+
+	if incomingMsg == "hi" {
 		msg.Body = "Hi!"
 		session.ClientMSGS = append(session.ClientMSGS, incomingMsg)
-	} else if incomingMsg == "goodbye" || incomingMsg == "Goodbye" {
+	} else if incomingMsg == "goodbye" {
 		msg.Body = "See you later nerd"
 		session.ClientMSGS = append(session.ClientMSGS, incomingMsg)
 		server.endSession(clientID)
@@ -50,17 +47,48 @@ func (server *Server) handlerConvo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	server.mut.Lock()
-	_, exists = server.sessions[clientID]
+	session, exists = server.sessions[clientID]
+	server.mut.Unlock()
+
 	if !exists {
 		log.Print("ya se borro viejon, no hay nada ya")
-		log.Print(session)
-		log.Print(server.sessions[clientID])
 	} else {
-		log.Print(*session)
+		if session == nil {
+			log.Fatal("nil pointer my guy")
+		} else {
+			jsonData, err := json.MarshalIndent(*session, "", "    ")
+			if err != nil {
+				log.Fatal("Error marshaling to JSON:", err)
+			}
+			log.Print(string(jsonData))
+		}
 	}
-	server.mut.Unlock()
 
 	w.Header().Add("Content-Type", "text/xml")
 	w.WriteHeader(200)
 	io.WriteString(w, twiml)
+}
+
+func (server *Server) handleIncommingSession(session *SessionTracker, exists bool, client string, clientID string) *SessionTracker {
+	if !exists {
+		session = &SessionTracker{
+			ClientID:     clientID,
+			ClientNumber: client,
+		}
+
+		server.mut.Lock()
+		if existingSession, exists := server.sessions[clientID]; exists {
+			session = existingSession
+		} else {
+			server.sessions[clientID] = session
+		}
+		server.mut.Unlock()
+	}
+	return session
+}
+
+func (server *Server) endSession(clientID string) {
+	server.mut.Lock()
+	delete(server.sessions, clientID)
+	server.mut.Unlock()
 }
