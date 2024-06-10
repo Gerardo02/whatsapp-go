@@ -32,10 +32,13 @@ func (server *Server) handlerConvo(w http.ResponseWriter, r *http.Request) {
 	if incomingMsg == "hi" {
 		msg.Body = "Hi!"
 		session.ClientMSGS = append(session.ClientMSGS, incomingMsg)
-	} else if incomingMsg == "goodbye" {
+	} else if incomingMsg == "end" {
 		msg.Body = "See you later nerd"
 		session.ClientMSGS = append(session.ClientMSGS, incomingMsg)
 		server.endSession(clientID)
+	} else if incomingMsg == "compadre" {
+		msg.Body = "Compa! que dice compa como anda compa"
+		session.ClientMSGS = append(session.ClientMSGS, incomingMsg)
 	} else {
 		msg.Body = "Tu quien eres pues"
 		session.ClientMSGS = append(session.ClientMSGS, incomingMsg)
