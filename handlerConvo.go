@@ -15,7 +15,8 @@ func (server *Server) handlerConvo(w http.ResponseWriter, r *http.Request) {
 
 	err := r.ParseForm()
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		return
 	}
 
 	incomingMsg := strings.ToLower(r.PostForm.Get("Body"))
@@ -46,7 +47,8 @@ func (server *Server) handlerConvo(w http.ResponseWriter, r *http.Request) {
 
 	twiml, err := twiml.Messages([]twiml.Element{msg})
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		return
 	}
 
 	server.mut.Lock()
@@ -57,11 +59,13 @@ func (server *Server) handlerConvo(w http.ResponseWriter, r *http.Request) {
 		log.Print("ya se borro viejon, no hay nada ya")
 	} else {
 		if session == nil {
-			log.Fatal("nil pointer my guy")
+			log.Println("nil pointer my guy")
+			return
 		} else {
 			jsonData, err := json.MarshalIndent(*session, "", "    ")
 			if err != nil {
-				log.Fatal("Error marshaling to JSON:", err)
+				log.Println(err)
+				return
 			}
 			log.Print(string(jsonData))
 		}
